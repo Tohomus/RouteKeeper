@@ -1,70 +1,63 @@
+import { useState } from "react";
 import Modal from "./Modal";
 import Button from "./Button";
-import { useState } from "react";
+import { updateUserProfile } from "../services/userService";
+import { useAuth } from "../context/AuthContext";
 
-export default function EditProfileModal({
-  isOpen,
-  onClose,
-  user,
-  onSave,
-}) {
-  const [formData, setFormData] = useState(user);
+export default function EditProfileModal({ isOpen, onClose, user }) {
+  const { refreshProfile } = useAuth();
 
-  const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
-  };
+  const [name, setName] = useState(user?.name || "");
+  const [mobile, setMobile] = useState(user?.mobile || "");
+  const [saving, setSaving] = useState(false);
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    onSave(formData); // later -> backend
-    onClose();
+  const handleSave = async () => {
+    if (!user?.uid) {
+      console.error("UID missing — cannot update profile");
+      return;
+    }
+
+    try {
+      setSaving(true);
+      console.log("Updating profile for UID:", user.uid);
+
+      await updateUserProfile(user.uid, {
+        name,
+        mobile,
+      });
+
+      await refreshProfile();
+      onClose();
+    } catch (error) {
+      console.error("Profile update failed", error);
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Edit Profile Information">
-      <form onSubmit={handleSubmit}>
-        {/* Name */}
+    <Modal isOpen={isOpen} onClose={onClose} title="Edit Profile">
+      <div className="space-y-4">
         <input
-          name="name"
-          value={formData.name}
-          onChange={handleChange}
-          placeholder="Name"
-          className="w-full mb-3 px-3 py-2 border rounded-xl"
-          required
+          className="w-full border px-3 py-2 rounded-xl"
+          placeholder="Full Name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
         />
 
-        {/* Email (readonly usually) */}
         <input
-          name="email"
-          value={formData.email}
-          disabled
-          className="w-full mb-3 px-3 py-2 border rounded-xl bg-gray-100"
-        />
-
-        {/* Mobile */}
-        <input
-          name="mobile"
-          value={formData.mobile}
-          onChange={handleChange}
+          className="w-full border px-3 py-2 rounded-xl"
           placeholder="Mobile Number"
-          className="w-full mb-4 px-3 py-2 border rounded-xl"
-          required
+          value={mobile}
+          onChange={(e) => setMobile(e.target.value)}
         />
 
-        {/* Change Password (UI only) */}
-        <button
-          type="button"
-          className="text-sm text-brand hover:underline mb-4"
-          disabled
-        >
-          Change Password (Coming Soon)
-        </button>
-
-        <Button text="Save Changes" type="submit" />
-      </form>
+        <Button
+          text={saving ? "Saving..." : "Save Changes"}
+          onClick={handleSave}
+          disabled={saving}
+        />
+      </div>
     </Modal>
   );
 }

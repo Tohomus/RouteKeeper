@@ -13,6 +13,9 @@ export default function Profile() {
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
   const [loadingProfile, setLoadingProfile] = useState(true);
+  const handleProfileUpdated=(updatedProfile)=>{
+    setProfile(updatedProfile);
+  }
 
   useEffect(() => {
     if (authLoading || !currentUser) return;
@@ -132,7 +135,8 @@ export default function Profile() {
       <EditProfileModal
         isOpen={isEditOpen}
         onClose={() => setIsEditOpen(false)}
-        user={profile}
+        user={{...profile,uid:currentUser.uid}}
+        onUpdated={handleProfileUpdated}
       />
     </div>
   );

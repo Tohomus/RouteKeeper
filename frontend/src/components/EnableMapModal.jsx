@@ -1,11 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { MapContainer, TileLayer, Marker, useMapEvents } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import Modal from "./Modal";
 import Button from "./Button";
 import { setRouteCoordinates } from "../services/routeService";
 
-/* INTERNAL CLICK HANDLER */
+/* INTERNAL MAP CLICK HANDLER */
 function ClickHandler({ onPick }) {
   useMapEvents({
     click(e) {
@@ -19,11 +19,29 @@ function ClickHandler({ onPick }) {
 export default function EnableMapModal({ isOpen, onClose, route, onSuccess }) {
   const [picked, setPicked] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [center, setCenter] = useState([10.0, 76.3]);
+
+  /* Reset state on open */
+  useEffect(() => {
+    if (!isOpen) return;
+
+    setPicked(null);
+
+    if (route?.latitude && route?.longitude) {
+      setCenter([route.latitude, route.longitude]);
+    } else if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) =>
+          setCenter([pos.coords.latitude, pos.coords.longitude]),
+        () => setCenter([10.0, 76.3])
+      );
+    }
+  }, [isOpen, route]);
 
   if (!isOpen || !route) return null;
 
   const handleSave = async () => {
-    if (!picked) return;
+    if (!picked || saving) return;
 
     try {
       setSaving(true);
@@ -38,14 +56,18 @@ export default function EnableMapModal({ isOpen, onClose, route, onSuccess }) {
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Pick location on map">
+    <Modal
+      isOpen={isOpen}
+      onClose={saving ? () => {} : onClose}
+      title="Pick location on map"
+    >
       <p className="text-sm text-gray-500 mb-2 text-center">
         Click once on the map to select location
       </p>
 
-      <div className="h-64 mb-4 pointer-events-auto">
+      <div className="h-64 mb-4">
         <MapContainer
-          center={[10.0, 76.3]}
+          center={center}
           zoom={13}
           className="h-full w-full rounded-xl"
         >

@@ -1,7 +1,10 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { getRoutesByCategory, updateLastVisited } from "../services/routeService";
+import {
+  getRoutesByCategory,
+  updateLastVisited,
+} from "../services/routeService";
 
 import AddLocationModal from "../components/AddLocationModal";
 import EnableMapModal from "../components/EnableMapModal";
@@ -19,11 +22,20 @@ export default function CategoryRoutes() {
   const [enableMapRoute, setEnableMapRoute] = useState(null);
   const [toast, setToast] = useState("");
   const [stats, setStats] = useState(null);
-  const [tracking, setTracking] = useState(false); // ✅ NEW
+  const [tracking, setTracking] = useState(false);
+
+  /* Fetch routes */
+  const fetchRoutes = async () => {
+    if (!currentUser) return;
+    const data = await getRoutesByCategory(
+      currentUser.uid,
+      category
+    );
+    setRoutes(data);
+  };
 
   useEffect(() => {
-    if (!currentUser) return;
-    getRoutesByCategory(currentUser.uid, category).then(setRoutes);
+    fetchRoutes();
   }, [currentUser, category]);
 
   const showToast = (msg) => {
@@ -54,7 +66,7 @@ export default function CategoryRoutes() {
                 setSelectedRoute(route);
                 updateLastVisited(route.id);
                 setStats(null);
-                setTracking(false); // reset tracking
+                setTracking(false);
               }}
               className="cursor-pointer p-3 mb-3 rounded-xl border hover:bg-gray-50"
             >
@@ -87,7 +99,7 @@ export default function CategoryRoutes() {
               )}
 
               {/* TRACK CONTROLS */}
-              <div className="flex gap-3 mb-3">
+              <div className="flex gap-3 mb-3 flex-wrap">
                 {!tracking ? (
                   <button
                     onClick={() => setTracking(true)}
@@ -102,6 +114,24 @@ export default function CategoryRoutes() {
                   >
                     ⏹ Stop Tracking
                   </button>
+                )}
+
+                <button
+                  onClick={() => setEnableMapRoute(selectedRoute)}
+                  className="px-4 py-2 rounded-xl border border-brand text-brand hover:bg-brand-light"
+                >
+                  📍 Change location
+                </button>
+
+                {selectedRoute.mapLink && (
+                  <a
+                    href={selectedRoute.mapLink}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="px-4 py-2 rounded-xl bg-brand text-white hover:bg-brand-dark"
+                  >
+                    🗺 Open in Google Maps
+                  </a>
                 )}
               </div>
 
@@ -153,7 +183,7 @@ export default function CategoryRoutes() {
       {/* ADD ROUTE */}
       <button
         onClick={() => setIsModalOpen(true)}
-        className="fixed bottom-6 right-6 w-14 h-14 rounded-full bg-brand text-white text-3xl flex items-center justify-center"
+        className="fixed bottom-6 right-6 w-14 h-14 rounded-full bg-brand text-white text-3xl flex items-center justify-center z-50"
       >
         +
       </button>
@@ -164,12 +194,16 @@ export default function CategoryRoutes() {
         defaultCategory={category}
       />
 
+      {/* ENABLE MAP MODAL */}
       {enableMapRoute && (
         <EnableMapModal
           isOpen
           route={enableMapRoute}
           onClose={() => setEnableMapRoute(null)}
-          onSuccess={() => showToast("In-app map enabled")}
+          onSuccess={() => {
+            fetchRoutes();
+            showToast("In-app map enabled");
+          }}
         />
       )}
 
